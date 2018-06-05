@@ -15,7 +15,7 @@ setup(
     long_description=readme,
     author='Doug Cahill',
     author_email='handruin@gmail.com',
-    url='https://github.com/handruin',
+    url='https://github.com/handruin/riverside-assignment-program',
     license=license,
     packages=find_packages(exclude=('tests', 'docs'))
 )
