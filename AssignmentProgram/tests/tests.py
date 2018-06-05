@@ -1,5 +1,6 @@
 import toml
 
+# Experimenting with generating TOML config from source.  Not likely to be used.
 toml_string = """
 title = "TOML Example"
 [owner]

@@ -5,7 +5,7 @@ with open('README.rst') as f:
     readme = f.read()
 
 with open('LICENSE') as f:
-    license = f.read()
+    project_license = f.read()
 
 setup(
     name='AssignmentProgram',
@@ -16,6 +16,6 @@ setup(
     author='Doug Cahill',
     author_email='handruin@gmail.com',
     url='https://github.com/handruin/riverside-assignment-program',
-    license=license,
+    license=project_license,
     packages=find_packages(exclude=('tests', 'docs'))
 )
