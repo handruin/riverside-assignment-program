@@ -1,11 +1,15 @@
 class Member(object):
-    def __init__(self, medicaid_id, last_name, first_name, middle_initial, date_of_birth):
+    def __init__(self, medicaid_id, last_name, first_name, middle_initial, date_of_birth, residential_address_zipcode_1,
+                 identification_flag):
         self.affiliates = []
         self.medicaid_id = medicaid_id
         self.last_name = last_name
         self.first_name = first_name
         self.middle_initial = middle_initial
         self.date_of_birth = date_of_birth
+        self.residential_address_zipcode_1 = residential_address_zipcode_1
+        self.identification_flag = identification_flag
+        self.is_assigned = False
 
     def add_affiliate(self, affiliate):
         self.affiliates.append(affiliate)
