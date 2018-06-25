@@ -1,9 +1,0 @@
-# TOML Configuration file used to define Service Areas
-# https://github.com/uiri/toml
-
-[service_areas]
-areas = [
-    [ "Framingham", "01702"],
-    [ "Framingham", "01701"],
-    [ "Framingham", "01702"],
-]

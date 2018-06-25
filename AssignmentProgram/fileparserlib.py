@@ -1,24 +1,58 @@
 from openpyxl import load_workbook
+from openpyxl.styles import Alignment
 
-from AssignmentProgram.Capacity import Capacity
+from AssignmentProgram.Rule import ClientZipcodeInAPServiceAreaRule, RuleProcessing, \
+    CurrentACCSclientAPorganizationRule, \
+    SetACCSRule, FailedAssignmentRule, CurrentPCPClientAPOrganizationRule, FormerCBFSWithoutTransitionACCS, \
+    ClientOfBehavioralServiceAP, ClientOfLTSSatAP, ClientNoPriorHistoryZipcodeCapacityMatch
+from AssignmentProgram.Capacity import Capacity, CapacityManager
 from AssignmentProgram.Member import Member, Affiliate
-from AssignmentProgram.Zipcode import Zipcode
+from AssignmentProgram.Zipcode import Zipcode, ZipcodeManager
+import logging
+from logging.config import dictConfig
+
+logging_config = dict(
+    version=1,
+    formatters={
+        'f': {'format':
+              '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'}
+        },
+    handlers={
+        'h': {'class': 'logging.StreamHandler',
+              'formatter': 'f',
+              'level': logging.DEBUG}
+        },
+    root={
+        'handlers': ['h'],
+        'level': logging.DEBUG,
+        },
+)
+
+dictConfig(logging_config)
+logger = logging.getLogger()
+handler = logging.FileHandler('assignment_program.log')
+logger.addHandler(handler)
 
 
 def parse_mass_health_excel():
     # Temporary way to obscure name of file being read in for privacy concerns.
+    # This simple text file should only contain a single line with the full path to the Excel spreadsheet.
     with open('parse_masshealth_file_name.txt') as f:
         file_name = f.read()
     return load_workbook(file_name).active
 
 
 def parse_zipcode_excel():
+    # Temporary way to obscure name of file being read in for privacy concerns.
+    # This simple text file should only contain a single line with the full path to the Excel spreadsheet.
     with open('parse_zipcode_file_name.txt') as f:
         file_name = f.read()
     return load_workbook(file_name).active
 
 
 def parse_capacity_excel():
+    # Temporary way to obscure name of file being read in for privacy concerns.
+    # This simple text file should only contain a single line with the full path to the Excel spreadsheet.
     with open('parse_capacity_file_name.txt') as f:
         file_name = f.read()
     return load_workbook(file_name).active
@@ -95,15 +129,38 @@ def get_record(row, column, active_sheet):
         return val
 
 
+def get_record_cell(row, column, active_sheet):
+    """
+    Helper function for extracting a record from an excel sheet.
+    :param row:
+    :param column:
+    :param active_sheet:
+    :return: Cell
+    """
+    cell_name = "{}{}".format(column, row)
+    if active_sheet[cell_name]:
+        return active_sheet[cell_name]
+
+
 def get_record_and_priority(row, column, active_sheet):
+    """
+    Helper function used to get a record from an Excel workbook.
+    :param row: String
+    :param column: String
+    :param active_sheet: Workbook
+    :return: Dict
+    """
     cell_name = "{}{}".format(column, row)
     priority = False
     val = None
     if active_sheet[cell_name].value:
-        if not isinstance(active_sheet[cell_name].value, int):
-            val = active_sheet[cell_name].value.lower()
-        else:
-            val = active_sheet[cell_name].value
+        cell_val = active_sheet[cell_name].value
+        # strip out cells with empty strings so they aren't used as a value.
+        if cell_val.strip():
+            if not isinstance(cell_val, int):
+                val = cell_val.lower()
+            else:
+                val = cell_val
         # Checking for the color Yellow used in the zip code excel sheet to indicate priority
         if active_sheet[cell_name].fill.start_color.index == 'FFFFFF00':
             priority = True
@@ -111,6 +168,11 @@ def get_record_and_priority(row, column, active_sheet):
 
 
 def is_empty_member(member):
+    """
+    Check for an empty Member object to detect for empty Excel rows.
+    :param member: Member
+    :return: Boolean
+    """
     if member.medicaid_id is None \
             and member.last_name is None \
             and member.first_name is None \
@@ -125,6 +187,11 @@ def is_empty_member(member):
 
 
 def is_affiliate_empty(affiliate_obj):
+    """
+    Check for an empty Affiliate object to detect for empty Excel rows.
+    :param member: Affiliate
+    :return: Boolean
+    """
     if affiliate_obj.affiliate_name is None \
             and affiliate_obj.is_accs is False \
             and affiliate_obj.is_pcp is False \
@@ -142,6 +209,11 @@ def is_affiliate_empty(affiliate_obj):
 
 
 def is_zipcode_empty(zipcode):
+    """
+    Check for an empty Zipcode object to detect for empty Excel rows.
+    :param member: Zipcode
+    :return: Boolean
+    """
     if zipcode.city_town is None \
             and zipcode.zipcode is None \
             and zipcode.ap_lynn is None \
@@ -156,6 +228,11 @@ def is_zipcode_empty(zipcode):
 
 
 def is_capacity_empty(capacity):
+    """
+    Check for an empty Capacity object to detect for empty Excel rows.
+    :param member: Capacity
+    :return: Boolean
+    """
     if capacity.ap is None \
             and capacity.capacity is None:
         return True
@@ -163,12 +240,22 @@ def is_capacity_empty(capacity):
 
 
 def update_member_affiliates(all_members, new_member):
+    """
+    Update the member affiliates with a new member data.
+    :param all_members: List
+    :param new_member: List
+    :return: None
+    """
     member = get_existing_member(all_members, new_member)
     for affiliate in new_member.affiliates:
         member.add_affiliate(affiliate)
 
 
 def process_members():
+    """
+    Process all member data from an Excel workbook into Member objects.
+    :return: List
+    """
     active_sheet = parse_mass_health_excel()
     obj_members = []
 
@@ -232,6 +319,10 @@ def process_members():
 
 
 def process_zipcodes():
+    """
+    Process all Zipcode data from an Excel workbook into Zipcode objects.
+    :return: List
+    """
     active_sheet = parse_zipcode_excel()
     obj_zipcodes = []
 
@@ -268,6 +359,10 @@ def process_zipcodes():
 
 
 def process_capacity():
+    """
+    Process all Capacity data from an Excel workbook into Capacity objects.
+    :return: List
+    """
     active_sheet = parse_capacity_excel()
     obj_capacitys = []
 
@@ -285,39 +380,92 @@ def process_capacity():
     return obj_capacitys
 
 
-def process_rules(member):
-    rule_set_accs(member)
+def process_rules(member, capacity_manager, zipcode_manager):
+    """
+    Establish a Rule Processor and assign new Rules to be parsed.
+    :param member: List
+    :param capacity_manager: List
+    :param zipcode_manager: List
+    :return: None
+    """
+    rp = RuleProcessing(member, capacity_manager, zipcode_manager)
+    rp.assign_rule(ClientZipcodeInAPServiceAreaRule())
+    rp.assign_rule(CurrentACCSclientAPorganizationRule())
+    rp.assign_rule(SetACCSRule())  # TODO Figure out how this rule fits into the cascade
+    rp.assign_rule(CurrentPCPClientAPOrganizationRule())
+    rp.assign_rule(FormerCBFSWithoutTransitionACCS())
+    rp.assign_rule(ClientOfBehavioralServiceAP())
+    rp.assign_rule(ClientOfLTSSatAP())
+    rp.assign_rule(ClientNoPriorHistoryZipcodeCapacityMatch())
+    rp.assign_rule(FailedAssignmentRule())
+    rp.process()
 
-
-def rule_set_accs(member):
-    for affiliate in member.affiliates:
-        if affiliate.is_accs is False \
-                and affiliate.affiliate_name is None \
-                and affiliate.is_cbfs is True:
-            if member.identification_flag.lower() == "accs":
-                # TODO - change to logger instead of printing to stdout
-                print("Rule met and set accs to True for {0}".format(member.first_name))
-                affiliate.is_accs = True
+    for rule_exception in rp.member_rule_exceptions:
+        message = "Medicaid ID: {0} | Member Zipcode: {1} | " \
+              "Message {2} | Rule Class: {3} | Error Type Class: {4}".format(rule_exception.member.medicaid_id,
+                                                                rule_exception.member.residential_address_zipcode_1,
+                                                                rule_exception.exception_message,
+                                                                rule_exception.rule.__class__.__name__,
+                                                                rule_exception.assignment_error_type.__class__.__name__)
+        logger.debug(message)
 
 
 all_zipcodes = process_zipcodes()
-for zipcode in all_zipcodes:
-    # print("city: {0} | zipcode: {1}".format(zipcode.city_town, zipcode.zipcode))
-    print("Is zipcode: {0} priority: {1}".format(zipcode.zipcode, zipcode.ap_priority))
+zipcode_manager = ZipcodeManager(all_zipcodes)
 
-all_capacitys = process_capacity()
-for capacity in all_capacitys:
-    print("ap: {} | capacity: {}".format(capacity.ap, capacity.capacity))
+all_capacities = process_capacity()
+capacity_manager = CapacityManager(all_capacities)
 
 all_members = process_members()
 for mem in all_members:
-    process_rules(mem)
-    for affiliate in mem.affiliates:
-        print("{0} - affiliate name: {1}, is_accs: {2}, zipcode: {3}".format(mem.first_name, affiliate.affiliate_name, affiliate.is_accs, mem.residential_address_zipcode_1))
+    process_rules(mem, capacity_manager, zipcode_manager)
 
+count_unassigned = []
+total_count = []
+members_with_multiple_affiliates = []
+for mem in all_members:
+    total_count.append(mem)
+    if len(mem.affiliates) > 1:
+        members_with_multiple_affiliates.append(mem)
+    if not mem.is_assigned:
+        count_unassigned.append(mem)
+        # print("Is {0} assigned: {1}".format(mem.first_name, mem.is_assigned))
+
+logger.info("Total members: {0}".format(len(total_count)))
+logger.info("Remaining unassigned members: {0}".format(len(count_unassigned)))
+logger.info("Members with multiple affiliate entries: {0}".format(len(members_with_multiple_affiliates)))
+logger.info("="*80)
+
+
+def update_masshealth_assignments(all_members):
+
+    with open('parse_masshealth_file_name.txt') as f:
+        file_name = f.read()
+        wb = load_workbook(file_name)
+        active_sheet = wb.active
+
+    member_attributes = {
+        "medicaid_id": "A"
+    }
+
+    assigned_to_column = {
+        "assigned_to": "BI"
+    }
+
+    for row in range(2, active_sheet.max_row + 1):
+        medicaid_cell = get_record_cell(row, member_attributes['medicaid_id'], active_sheet)
+        assigned_to_cell = get_record_cell(row, assigned_to_column['assigned_to'], active_sheet)
+        if medicaid_cell.value:
+            for member in all_members:
+                if member.medicaid_id == medicaid_cell.value:
+                    assigned_to_cell.value = member.get_assigned_affiliate() or ""
+                    assigned_to_cell.alignment = Alignment(horizontal='center', vertical='center')
+                    # print("Medicaid: {0} | Assigned: {1}".format(medicaid_cell.value, assigned_to_cell.value))
+                    all_members.remove(member)
+    wb.save(file_name)
+
+
+update_masshealth_assignments(all_members)
 exit(0)
 
-# Rules:
-# if accs is None and affiliate is None and cbfs is not None:
-# if identification_flag.lower() == "ACCS".lower()
-#   set accs = 1
+
