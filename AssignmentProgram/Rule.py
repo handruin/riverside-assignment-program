@@ -1,8 +1,10 @@
 """
-The Assignment Program will use the following cascading criteria for assignment.  For each criterion listed, general logic will include:
+The Assignment Program will use the following cascading criteria for assignment.  For each criterion listed, general
+logic will include:
 •	Does the referral <criteria>?
 •	If NO, go to next selection criteria.
-•	If YES, check AP’s capacity.  If YES capacity then assign to that AP and decrement that AP’s Capacity by one.  Next record.
+•	If YES, check AP’s capacity.  If YES capacity then assign to that AP and decrement that AP’s Capacity by one.
+    Next record.
 •	If capacity is NO then go to next selection criteria.
 
 Assignment Criteria, in order of importance:
@@ -187,7 +189,7 @@ class CurrentPCPClientAPOrganizationRule(Rule):
                 self.process_match_and_capacity(affiliate)
 
 
-class FormerCBFSWithoutTransitionACCS(Rule):
+class FormerCBFSWithoutTransitionACCSRule(Rule):
     """
     Rule used for handling the assignments of members based on numerous conditions and priorities outlined below:
     4.    Was the Referral a former CBFS client who did not transition to ACCS?
@@ -206,7 +208,7 @@ class FormerCBFSWithoutTransitionACCS(Rule):
                 self.process_match_and_capacity(affiliate)
 
 
-class ClientOfBehavioralServiceAP(Rule):
+class ClientOfBehavioralServiceAPRule(Rule):
     """
     Rule used for handling the assignments of members based on numerous conditions and priorities outlined below:
     5.	Was the Referral a client of any Behavioral Health service program at the AP organization?
@@ -232,7 +234,7 @@ class ClientOfBehavioralServiceAP(Rule):
                 self.process_match_and_capacity(affiliate)
 
 
-class ClientOfLTSSatAP(Rule):
+class ClientOfLTSSatAPRule(Rule):
     """
     Rule used for handling the assignments of members based on numerous conditions and priorities outlined below:
     6.	Was the Referral a client of any LTSS program at the AP organization?
@@ -247,7 +249,7 @@ class ClientOfLTSSatAP(Rule):
                 self.process_match_and_capacity(affiliate)
 
 
-class ClientNoPriorHistoryZipcodeCapacityMatch(Rule):
+class ClientNoPriorHistoryZipcodeCapacityMatchRule(Rule):
     """
     Rule used for handling the assignments of members based on numerous conditions and priorities outlined below:
     7.	If a referral has no previous history with Riverside or the APs, then assignment will be based on Zip code, and

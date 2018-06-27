@@ -5,8 +5,8 @@ from openpyxl.styles import Alignment
 
 from AssignmentProgram.Rule import ClientZipcodeInAPServiceAreaRule, RuleProcessing, \
     CurrentACCSclientAPorganizationRule, \
-    SetACCSRule, FailedAssignmentRule, CurrentPCPClientAPOrganizationRule, FormerCBFSWithoutTransitionACCS, \
-    ClientOfBehavioralServiceAP, ClientOfLTSSatAP, ClientNoPriorHistoryZipcodeCapacityMatch
+    SetACCSRule, FailedAssignmentRule, CurrentPCPClientAPOrganizationRule, FormerCBFSWithoutTransitionACCSRule, \
+    ClientOfBehavioralServiceAPRule, ClientOfLTSSatAPRule, ClientNoPriorHistoryZipcodeCapacityMatchRule
 from AssignmentProgram.Capacity import Capacity, CapacityManager
 from AssignmentProgram.Member import Member, Affiliate
 from AssignmentProgram.Zipcode import Zipcode, ZipcodeManager
@@ -388,10 +388,10 @@ def process_rules(all_members, capacity_manager, zipcode_manager):
         rp.assign_rule(CurrentACCSclientAPorganizationRule())
         rp.assign_rule(SetACCSRule())  # TODO Figure out how this rule fits into the cascade
         rp.assign_rule(CurrentPCPClientAPOrganizationRule())
-        rp.assign_rule(FormerCBFSWithoutTransitionACCS())
-        rp.assign_rule(ClientOfBehavioralServiceAP())
-        rp.assign_rule(ClientOfLTSSatAP())
-        rp.assign_rule(ClientNoPriorHistoryZipcodeCapacityMatch())
+        rp.assign_rule(FormerCBFSWithoutTransitionACCSRule())
+        rp.assign_rule(ClientOfBehavioralServiceAPRule())
+        rp.assign_rule(ClientOfLTSSatAPRule())
+        rp.assign_rule(ClientNoPriorHistoryZipcodeCapacityMatchRule())
         rp.assign_rule(FailedAssignmentRule())
         rp.process()
 
