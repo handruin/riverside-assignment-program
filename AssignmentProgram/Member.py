@@ -15,6 +15,7 @@ class Member(object):
         self.residential_address_zipcode_1 = str(residential_address_zipcode_1).zfill(5)
         self.identification_flag = identification_flag
         self.is_assigned = False
+        self.assignment_written = False
 
     def add_affiliate(self, affiliate):
         self.affiliates.append(affiliate)

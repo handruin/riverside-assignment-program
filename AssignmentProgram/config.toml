@@ -1,0 +1,8 @@
+[files_config]
+masshealth_location=''
+capacity_location=''
+zipcode_location=''
+
+[assignment_options]
+apply_capacities=true
+mark_member_duplicates=true

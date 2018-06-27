@@ -1,3 +1,5 @@
+import os
+
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment
 
@@ -34,20 +36,10 @@ handler = logging.FileHandler('assignment_program.log')
 logger.addHandler(handler)
 
 
-def parse_mass_health_excel():
-    # Temporary way to obscure name of file being read in for privacy concerns.
-    # This simple text file should only contain a single line with the full path to the Excel spreadsheet.
-    with open('parse_masshealth_file_name.txt') as f:
-        file_name = f.read()
-    return load_workbook(file_name).active
-
-
-def parse_zipcode_excel():
-    # Temporary way to obscure name of file being read in for privacy concerns.
-    # This simple text file should only contain a single line with the full path to the Excel spreadsheet.
-    with open('parse_zipcode_file_name.txt') as f:
-        file_name = f.read()
-    return load_workbook(file_name).active
+def load_excel_workbook(workbook_location):
+    if not os.path.exists(workbook_location):
+        raise FileNotFoundError("Error: Unable to locate file: {0}".format(workbook_location))
+    return load_workbook(workbook_location).active
 
 
 def parse_capacity_excel():
@@ -189,7 +181,7 @@ def is_empty_member(member):
 def is_affiliate_empty(affiliate_obj):
     """
     Check for an empty Affiliate object to detect for empty Excel rows.
-    :param member: Affiliate
+    :param affiliate_obj: Affiliate
     :return: Boolean
     """
     if affiliate_obj.affiliate_name is None \
@@ -211,7 +203,7 @@ def is_affiliate_empty(affiliate_obj):
 def is_zipcode_empty(zipcode):
     """
     Check for an empty Zipcode object to detect for empty Excel rows.
-    :param member: Zipcode
+    :param zipcode: Zipcode
     :return: Boolean
     """
     if zipcode.city_town is None \
@@ -230,7 +222,7 @@ def is_zipcode_empty(zipcode):
 def is_capacity_empty(capacity):
     """
     Check for an empty Capacity object to detect for empty Excel rows.
-    :param member: Capacity
+    :param capacity: Capacity
     :return: Boolean
     """
     if capacity.ap is None \
@@ -251,12 +243,13 @@ def update_member_affiliates(all_members, new_member):
         member.add_affiliate(affiliate)
 
 
-def process_members():
+def process_members(member_file_location):
     """
     Process all member data from an Excel workbook into Member objects.
+    :param member_file_location: List
     :return: List
     """
-    active_sheet = parse_mass_health_excel()
+    active_sheet = load_excel_workbook(member_file_location)
     obj_members = []
 
     member_attributes = {
@@ -318,12 +311,13 @@ def process_members():
     return obj_members
 
 
-def process_zipcodes():
+def process_zipcodes(zipcode_file_location):
     """
     Process all Zipcode data from an Excel workbook into Zipcode objects.
+    :param zipcode_file_location: List
     :return: List
     """
-    active_sheet = parse_zipcode_excel()
+    active_sheet = load_excel_workbook(zipcode_file_location)
     obj_zipcodes = []
 
     zipcode_base_params = {
@@ -358,12 +352,12 @@ def process_zipcodes():
     return obj_zipcodes
 
 
-def process_capacity():
+def process_capacity(capacity_file_location):
     """
     Process all Capacity data from an Excel workbook into Capacity objects.
     :return: List
     """
-    active_sheet = parse_capacity_excel()
+    active_sheet = load_excel_workbook(capacity_file_location)
     obj_capacitys = []
 
     capacity_base_params = {
@@ -380,69 +374,85 @@ def process_capacity():
     return obj_capacitys
 
 
-def process_rules(member, capacity_manager, zipcode_manager):
+def process_rules(all_members, capacity_manager, zipcode_manager):
     """
     Establish a Rule Processor and assign new Rules to be parsed.
-    :param member: List
+    :param all_members: List
     :param capacity_manager: List
     :param zipcode_manager: List
     :return: None
     """
-    rp = RuleProcessing(member, capacity_manager, zipcode_manager)
-    rp.assign_rule(ClientZipcodeInAPServiceAreaRule())
-    rp.assign_rule(CurrentACCSclientAPorganizationRule())
-    rp.assign_rule(SetACCSRule())  # TODO Figure out how this rule fits into the cascade
-    rp.assign_rule(CurrentPCPClientAPOrganizationRule())
-    rp.assign_rule(FormerCBFSWithoutTransitionACCS())
-    rp.assign_rule(ClientOfBehavioralServiceAP())
-    rp.assign_rule(ClientOfLTSSatAP())
-    rp.assign_rule(ClientNoPriorHistoryZipcodeCapacityMatch())
-    rp.assign_rule(FailedAssignmentRule())
-    rp.process()
+    for member in all_members:
+        rp = RuleProcessing(member, capacity_manager, zipcode_manager)
+        rp.assign_rule(ClientZipcodeInAPServiceAreaRule())
+        rp.assign_rule(CurrentACCSclientAPorganizationRule())
+        rp.assign_rule(SetACCSRule())  # TODO Figure out how this rule fits into the cascade
+        rp.assign_rule(CurrentPCPClientAPOrganizationRule())
+        rp.assign_rule(FormerCBFSWithoutTransitionACCS())
+        rp.assign_rule(ClientOfBehavioralServiceAP())
+        rp.assign_rule(ClientOfLTSSatAP())
+        rp.assign_rule(ClientNoPriorHistoryZipcodeCapacityMatch())
+        rp.assign_rule(FailedAssignmentRule())
+        rp.process()
 
-    for rule_exception in rp.member_rule_exceptions:
-        message = "Medicaid ID: {0} | Member Zipcode: {1} | " \
-              "Message {2} | Rule Class: {3} | Error Type Class: {4}".format(rule_exception.member.medicaid_id,
-                                                                rule_exception.member.residential_address_zipcode_1,
-                                                                rule_exception.exception_message,
-                                                                rule_exception.rule.__class__.__name__,
-                                                                rule_exception.assignment_error_type.__class__.__name__)
-        logger.debug(message)
-
-
-all_zipcodes = process_zipcodes()
-zipcode_manager = ZipcodeManager(all_zipcodes)
-
-all_capacities = process_capacity()
-capacity_manager = CapacityManager(all_capacities)
-
-all_members = process_members()
-for mem in all_members:
-    process_rules(mem, capacity_manager, zipcode_manager)
-
-count_unassigned = []
-total_count = []
-members_with_multiple_affiliates = []
-for mem in all_members:
-    total_count.append(mem)
-    if len(mem.affiliates) > 1:
-        members_with_multiple_affiliates.append(mem)
-    if not mem.is_assigned:
-        count_unassigned.append(mem)
-        # print("Is {0} assigned: {1}".format(mem.first_name, mem.is_assigned))
-
-logger.info("Total members: {0}".format(len(total_count)))
-logger.info("Remaining unassigned members: {0}".format(len(count_unassigned)))
-logger.info("Members with multiple affiliate entries: {0}".format(len(members_with_multiple_affiliates)))
-logger.info("="*80)
+        for rule_exception in rp.member_rule_exceptions:
+            message = "Medicaid ID: {0} | " \
+                      "Member Zipcode: {1} | " \
+                      "Message {2} | " \
+                      "Rule Class: {3} | " \
+                      "Error Type Class: {4}".format(rule_exception.member.medicaid_id,
+                                                     rule_exception.member.residential_address_zipcode_1,
+                                                     rule_exception.exception_message,
+                                                     rule_exception.rule.__class__.__name__,
+                                                     rule_exception.assignment_error_type.__class__.__name__)
+            logger.debug(message)
 
 
-def update_masshealth_assignments(all_members):
+def generate_zipcodes_manager(file_location):
+    all_zipcodes = process_zipcodes(file_location)
+    return ZipcodeManager(all_zipcodes)
 
-    with open('parse_masshealth_file_name.txt') as f:
-        file_name = f.read()
-        wb = load_workbook(file_name)
-        active_sheet = wb.active
+
+def generate_capacities_manager(file_location):
+    all_capacities = process_capacity(file_location)
+    return CapacityManager(all_capacities)
+
+
+def generate_members(file_location):
+    all_members = process_members(file_location)
+    return all_members
+
+
+# zipcode_manager = generate_zipcodes_manager()
+# capacities_manager = generate_capacities_manager()
+# all_members = generate_members()
+#
+# process_rules(all_members, capacities_manager, zipcode_manager)
+
+def generate_stats(all_members):
+    count_unassigned = []
+    total_count = []
+    members_with_multiple_affiliates = []
+    for mem in all_members:
+        total_count.append(mem)
+        if len(mem.affiliates) > 1:
+            members_with_multiple_affiliates.append(mem)
+        if not mem.is_assigned:
+            count_unassigned.append(mem)
+            # print("Is {0} assigned: {1}".format(mem.first_name, mem.is_assigned))
+
+    logger.info("Total members: {0}".format(len(total_count)))
+    logger.info("Remaining unassigned members: {0}".format(len(count_unassigned)))
+    logger.info("Members with multiple affiliate entries: {0}".format(len(members_with_multiple_affiliates)))
+    logger.info("="*80)
+
+
+def update_masshealth_assignments(all_members, masshealth_file_location, mark_duplicates=False):
+    duplication_text_marker = "DUPLICATE"
+    if not os.path.exists(masshealth_file_location):
+        raise FileNotFoundError("Error: Unable to locate file: {0}".format(masshealth_file_location))
+    wb = load_workbook(masshealth_file_location)
+    active_sheet = wb.active
 
     member_attributes = {
         "medicaid_id": "A"
@@ -455,17 +465,17 @@ def update_masshealth_assignments(all_members):
     for row in range(2, active_sheet.max_row + 1):
         medicaid_cell = get_record_cell(row, member_attributes['medicaid_id'], active_sheet)
         assigned_to_cell = get_record_cell(row, assigned_to_column['assigned_to'], active_sheet)
+        cell_alignment = Alignment(horizontal='center', vertical='center')
         if medicaid_cell.value:
             for member in all_members:
                 if member.medicaid_id == medicaid_cell.value:
-                    assigned_to_cell.value = member.get_assigned_affiliate() or ""
-                    assigned_to_cell.alignment = Alignment(horizontal='center', vertical='center')
-                    # print("Medicaid: {0} | Assigned: {1}".format(medicaid_cell.value, assigned_to_cell.value))
-                    all_members.remove(member)
-    wb.save(file_name)
-
-
-update_masshealth_assignments(all_members)
-exit(0)
-
-
+                    if not member.assignment_written:
+                        assigned_to_cell.value = member.get_assigned_affiliate() or ""
+                        assigned_to_cell.alignment = cell_alignment
+                        member.assignment_written = True
+                    else:
+                        if mark_duplicates:
+                            assigned_to_cell.value = duplication_text_marker
+                            assigned_to_cell.alignment = cell_alignment
+                    logger.debug("Medicaid: {0} | Assigned: {1}".format(medicaid_cell.value, assigned_to_cell.value))
+    wb.save(masshealth_file_location)
