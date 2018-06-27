@@ -1,8 +1,8 @@
 import argparse
 import os
 import toml
-from AssignmentProgram.fileparserlib import generate_zipcodes_manager, generate_capacities_manager, generate_members, \
-    process_rules, generate_stats, update_masshealth_assignments
+from AssignmentProgram.AssignmentProcessing import generate_zipcodes_manager, generate_capacities_manager, \
+    generate_members, process_rules, generate_stats, update_masshealth_assignments
 
 
 def set_args():
