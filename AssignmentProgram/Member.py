@@ -41,6 +41,11 @@ class Member(object):
                 return affiliate.assigned_to
         return None
 
+    def remove_all_affiliate_assignments(self):
+        for affiliate in self.affiliates:
+            affiliate.assigned_to = None
+        self.is_assigned = False
+
 
 class Affiliate(object):
     """

@@ -23,6 +23,7 @@ Assignment Criteria, in order of importance:
 7.	If a referral has no previous history with Riverside or the APs, then assignment will be based on Zip code, and
 assigned to the program that matches the Zip code and which has the highest percentage of current capacity.
 """
+import logging
 
 
 class Rule(object):
@@ -38,6 +39,8 @@ class Rule(object):
         self._member_affiliate_name = None
         self.rule_match = False
         self._rule_exceptions = []
+        self.assigned_member_affiliate_name = None
+        self.logger = logging.getLogger(__name__)
 
     def process_rule(self):
         raise NotImplementedError("Error: This method should be implemented in child class!")
@@ -113,6 +116,8 @@ class ClientZipcodeInAPServiceAreaRule(Rule):
         self.rule_priority = priority * self.rule_priority_base_multiplier
 
     def process_rule(self):
+        self.logger.debug(
+            'Rule {0} being processed for member {1}'.format(self.__class__.__name__, self.member.medicaid_id))
         member_zipcode = self.member.residential_address_zipcode_1
         if member_zipcode:
             affiliates_in_zipcode = self._zipcode_manager.get_affiliates_from_zipcode(member_zipcode)
@@ -126,14 +131,29 @@ class ClientZipcodeInAPServiceAreaRule(Rule):
                 if self.member.has_affiliate_relationship(ap):
                     self.assigned_member_affiliate_name = ap
                     if self.does_ap_have_capacity():
-                        self.member.assign_first_affiliate(ap)
-                        self.capacity_manager.decrement_capacity_from_affiliate(ap)
-                        self.rule_match = True
+                        if not self.member.is_assigned:
+                            self.member.assign_first_affiliate(ap)
+                            self.capacity_manager.decrement_capacity_from_affiliate(ap)
+                            self.rule_match = True
+                        else:
+                            message = "Member {0} has multiple assigned affiliates and needs manual processing.".format(
+                                self.member.medicaid_id)
+                            self.register_rule_exception(MemberRuleException(self.member,
+                                                                             MultipleAffiliateAssignmentError(message),
+                                                                             rule=self))
+                            self.logger.debug(
+                                'Warning, rule {0} met an exception with message: {1}.'.format(self.__class__.__name__,
+                                                                                               message))
+                            self.member.remove_all_affiliate_assignments()
+                            return
                     else:
                         message = "The assigned affiliate: {0} does not have capacity.".format(ap)
                         self.register_rule_exception(MemberRuleException(self.member,
                                                                          NoCapacityAssignmentError(message),
                                                                          rule=self))
+                        self.logger.debug(
+                            'Warning, rule {0} met an exception with message: {1}'.format(self.__class__.__name__,
+                                                                                          message))
 
 
 class CurrentACCSclientAPorganizationRule(Rule):
@@ -149,6 +169,8 @@ class CurrentACCSclientAPorganizationRule(Rule):
         self.rule_priority = priority * self.rule_priority_base_multiplier
 
     def process_rule(self):
+        self.logger.debug(
+            'Rule {0} being processed for member {1}'.format(self.__class__.__name__, self.member.medicaid_id))
         # look for ACCS field in Affiliates
         for affiliate in self.member.affiliates:
             if affiliate.is_accs:
@@ -164,6 +186,8 @@ class SetACCSRule(Rule):
         self.rule_priority = priority
 
     def process_rule(self):
+        self.logger.debug(
+            'Rule {0} being processed for member {1}'.format(self.__class__.__name__, self.member.medicaid_id))
         for affiliate in self.member.affiliates:
             if affiliate.is_accs is False \
                     and affiliate.affiliate_name is None \
@@ -184,6 +208,8 @@ class CurrentPCPClientAPOrganizationRule(Rule):
         self.rule_priority = priority * self.rule_priority_base_multiplier
 
     def process_rule(self):
+        self.logger.debug(
+            'Rule {0} being processed for member {1}'.format(self.__class__.__name__, self.member.medicaid_id))
         for affiliate in self.member.affiliates:
             if affiliate.is_pcp:
                 self.process_match_and_capacity(affiliate)
@@ -203,6 +229,8 @@ class FormerCBFSWithoutTransitionACCSRule(Rule):
         self.rule_priority = priority * self.rule_priority_base_multiplier
 
     def process_rule(self):
+        self.logger.debug(
+            'Rule {0} being processed for member {1}'.format(self.__class__.__name__, self.member.medicaid_id))
         for affiliate in self.member.affiliates:
             if affiliate.is_cbfs and not affiliate.is_accs:
                 self.process_match_and_capacity(affiliate)
@@ -224,6 +252,8 @@ class ClientOfBehavioralServiceAPRule(Rule):
         self.rule_priority = priority * self.rule_priority_base_multiplier
 
     def process_rule(self):
+        self.logger.debug(
+            'Rule {0} being processed for member {1}'.format(self.__class__.__name__, self.member.medicaid_id))
         for affiliate in self.member.affiliates:
             if affiliate.is_pact \
                     or affiliate.is_respite_or_css \
@@ -231,7 +261,15 @@ class ClientOfBehavioralServiceAPRule(Rule):
                     or affiliate.is_day_treatment \
                     or affiliate.is_csp \
                     or affiliate.is_emergency_svs:
-                self.process_match_and_capacity(affiliate)
+                if not self.rule_match:
+                    self.process_match_and_capacity(affiliate)
+                else:
+                    message = "Member {0} has multiple assigned affiliates and needs manual processing.".format(
+                        self.member.medicaid_id)
+                    self.register_rule_exception(MemberRuleException(self.member,
+                                                                     MultipleAffiliateAssignmentError(message),
+                                                                     rule=self))
+                    self.member.remove_all_affiliate_assignments()
 
 
 class ClientOfLTSSatAPRule(Rule):
@@ -244,6 +282,8 @@ class ClientOfLTSSatAPRule(Rule):
         self.rule_priority = priority * self.rule_priority_base_multiplier
 
     def process_rule(self):
+        self.logger.debug(
+            'Rule {0} being processed for member {1}'.format(self.__class__.__name__, self.member.medicaid_id))
         for affiliate in self.member.affiliates:
             if affiliate.is_ltss:
                 self.process_match_and_capacity(affiliate)
@@ -261,6 +301,8 @@ class ClientNoPriorHistoryZipcodeCapacityMatchRule(Rule):
         self._affiliate_partner_list = ["riverside", "lynn", "nsmha", "edinburg", "uphams", "dimock", "brookline"]
 
     def process_rule(self):
+        self.logger.debug(
+            'Rule {0} being processed for member {1}'.format(self.__class__.__name__, self.member.medicaid_id))
         for affiliate in self.member.affiliates:
             if affiliate.affiliate_name not in self._affiliate_partner_list:
                 # Match zipcode then find AP with highest current capacity
@@ -273,7 +315,8 @@ class ClientNoPriorHistoryZipcodeCapacityMatchRule(Rule):
                         self.register_rule_exception(MemberRuleException(self.member,
                                                                          NoMatchingAffiliateAssignmentError(message),
                                                                          rule=self))
-                    highest_capacity_ap = self.capacity_manager.get_highest_capacity_by_affiliates(affiliates_in_zipcode)
+                    highest_capacity_ap = self.capacity_manager.get_highest_capacity_percentage_by_affiliates(
+                        affiliates_in_zipcode)
                     if highest_capacity_ap:
                         self.member.assign_first_affiliate(highest_capacity_ap.ap)
                         self.capacity_manager.decrement_capacity_from_affiliate(highest_capacity_ap.ap)
@@ -298,6 +341,8 @@ class FailedAssignmentRule(Rule):
         self.rule_priority = priority
 
     def process_rule(self):
+        self.logger.warning(
+            'Rule {0} being processed for member {1}'.format(self.__class__.__name__, self.member.medicaid_id))
         message = "Warning: Failed member assignment.  Unable to process member after using all registered rules."
         self.register_rule_exception(MemberRuleException(self.member, AssignmentError(message), rule=self))
         self.rule_match = False
@@ -335,6 +380,7 @@ class RuleProcessing(object):
         self.capacity_manager = capacity_manager
         self.zipcode_manager = zipcode_manager
         self._member_rule_exceptions = []
+        self.logger = logging.getLogger(__name__)
 
     def assign_rule(self, rule):
         rule.member = self.member
@@ -369,6 +415,8 @@ class RuleProcessing(object):
                 rule.process_rule()
                 self.member_rule_exceptions = rule.get_all_rule_exceptions()
                 if rule.is_rule_met():
+                    self.logger.info(
+                        'Rule selected: {0} | Member: {1}'.format(rule.__class__.__name__, self.member.medicaid_id))
                     return
 
 
@@ -378,6 +426,7 @@ class AssignmentError(object):
     """
     def __init__(self, message):
         self.message = message
+        self.description = None
 
 
 class NoMatchingAffiliateAssignmentError(AssignmentError):
@@ -386,6 +435,7 @@ class NoMatchingAffiliateAssignmentError(AssignmentError):
     """
     def __init__(self, message):
         super().__init__(message)
+        self.description = "Basic error type when no matching affiliates can be found."
 
 
 class NoCapacityAssignmentError(AssignmentError):
@@ -394,3 +444,13 @@ class NoCapacityAssignmentError(AssignmentError):
     """
     def __init__(self, message):
         super().__init__(message)
+        self.description = "Basic error type when there is no capacity for a given affiliate program."
+
+
+class MultipleAffiliateAssignmentError(AssignmentError):
+    """
+    Basic error type when a member has been assigned more than one affiliate program.
+    """
+    def __init__(self, message):
+        super().__init__(message)
+        self.description = "Basic error type when a member has been assigned more than one affiliate program."

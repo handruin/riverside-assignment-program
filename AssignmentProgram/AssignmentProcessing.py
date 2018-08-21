@@ -115,7 +115,7 @@ def get_record(row, column, active_sheet):
     cell_name = "{}{}".format(column, row)
     if active_sheet[cell_name].value:
         if not isinstance(active_sheet[cell_name].value, int):
-            val = active_sheet[cell_name].value.lower()
+            val = active_sheet[cell_name].value.strip().lower()
         else:
             val = active_sheet[cell_name].value
         return val
@@ -398,19 +398,21 @@ def process_rules(all_members, capacity_manager, zipcode_manager):
         for rule_exception in rp.member_rule_exceptions:
             message = "Medicaid ID: {0} | " \
                       "Member Zipcode: {1} | " \
-                      "Message {2} | " \
+                      "Message: {2} | " \
                       "Rule Class: {3} | " \
-                      "Error Type Class: {4}".format(rule_exception.member.medicaid_id,
-                                                     rule_exception.member.residential_address_zipcode_1,
-                                                     rule_exception.exception_message,
-                                                     rule_exception.rule.__class__.__name__,
-                                                     rule_exception.assignment_error_type.__class__.__name__)
-            logger.debug(message)
+                      "Error Type Class: {4} | " \
+                      "Error Type Description: {5}".format(rule_exception.member.medicaid_id,
+                                                           rule_exception.member.residential_address_zipcode_1,
+                                                           rule_exception.exception_message,
+                                                           rule_exception.rule.__class__.__name__,
+                                                           rule_exception.assignment_error_type.__class__.__name__,
+                                                           rule_exception.assignment_error_type.description)
+            logger.warning(message)
 
 
 def generate_zipcodes_manager(file_location):
-    all_zipcodes = process_zipcodes(file_location)
-    return ZipcodeManager(all_zipcodes)
+    all_zipcode_objects = process_zipcodes(file_location)
+    return ZipcodeManager(all_zipcode_objects)
 
 
 def generate_capacities_manager(file_location):

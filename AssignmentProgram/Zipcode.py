@@ -138,23 +138,23 @@ class ZipcodeManager(object):
     """
     Helper class used to manage one or more Zipcode objects.
     """
-    def __init__(self, zipcodes):
-        self._all_zipcodes = zipcodes
+    def __init__(self, zipcode_objects):
+        self._all_zipcode_objects = zipcode_objects
 
     def contains_zipcode(self, requested_zipcode):
-        for zipcode in self._all_zipcodes:
-            if zipcode.zipcode == requested_zipcode:
+        for zipcode_object in self._all_zipcode_objects:
+            if zipcode_object.zipcode == requested_zipcode:
                 return True
         return False
 
     def get_zipcode(self, requested_zipcode):
-        for zipcode in self._all_zipcodes:
-            if zipcode.zipcode == requested_zipcode:
-                return zipcode
+        for zipcode_object in self._all_zipcode_objects:
+            if zipcode_object.zipcode == requested_zipcode:
+                return zipcode_object
         return None
 
     def get_affiliates_from_zipcode(self, requested_zipcode):
-        zipcode = self.get_zipcode(requested_zipcode)
-        if zipcode:
-            return zipcode.all_available_aps
+        zipcode_object = self.get_zipcode(requested_zipcode)
+        if zipcode_object:
+            return zipcode_object.all_available_aps
         return []

@@ -20,19 +20,22 @@ def set_args():
                            action="store",
                            dest='masshealthfile',
                            metavar="masshealth.xlsx",
-                           nargs=1)
+                           nargs=1,
+                           type=str)
     maingroup.add_argument("-z", "--zipcode-file",
                            help='Manually define location to Zipcode Excel workbook.',
                            action="store",
                            dest='zipcodefile',
                            metavar="zipcode.xlsx",
-                           nargs=1)
+                           nargs=1,
+                           type=str)
     maingroup.add_argument("-c", "--capacity-file",
                            help='Manually define location to Capacity Excel workbook.',
                            action="store",
                            dest='capacityfile',
                            metavar="zipcode.xlsx",
-                           nargs=1)
+                           nargs=1,
+                           type=str)
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument("-C", "--config-file",
                        help='Path to the configuration file used to define the source files.',
@@ -69,13 +72,13 @@ def main():
         print('test selected')
 
     if args.masshealthfile:
-        print("MassHealth File: {}".format(args.masshealthfile))
+        masshealth_file_location = args.masshealthfile[0]
 
-    if args.masshealthfile:
-        print("Zipcode File: {}".format(args.zipcodefile))
+    if args.zipcodefile:
+        zipcode_file_location = args.zipcodefile[0]
 
     if args.capacityfile:
-        print("Capacity File: {}".format(args.capacityfile))
+        capacity_file_location = args.capacityfile[0]
 
     if args.configfile:
         print("Config File: {}".format(args.configfile))
@@ -102,7 +105,7 @@ def main():
             exit(1)
 
     if args.markduplicates:
-        print("Marking up duplicate member rows with the text string DUPLICATE")
+        mark_member_duplicates = True
 
     # TODO - check if all config parsing is good, run the program...
     process_all(zipcode_file_location, capacity_file_location,
